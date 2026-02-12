@@ -23,28 +23,50 @@ function saqueAleatorio() {
   return (Math.random() * (3.0 - 1.5) + 1.5).toFixed(2);
 }
 
+function montarMensagemSinal({ entrada, saque, link }) {
+  return `🚀 AVIATOR — SILVER CORP
+
+🎯 Entrada: ${entrada}
+💸 Saque: ${saque}x
+📌 Regra: Entrar após 2 voos abaixo de 1.50x | Valor fixo | Máx. 2 tentativas
+
+🔥 ENTRE PELO LINK OFICIAL (BÔNUS)
+${link}`;
+}
+
+function validarMensagemSinal(mensagem, link) {
+  return (
+    mensagem.includes("AVIATOR") &&
+    mensagem.includes("ENTRE PELO LINK OFICIAL") &&
+    mensagem.includes(link)
+  );
+}
+
 // envia o sinal
-function enviarSinal() {
-  const mensagem =
-`🚀 AVIATOR – SILVER CORP
+async function enviarSinal() {
+  const mensagem = montarMensagemSinal({
+    entrada: horaAleatoria(),
+    saque: saqueAleatorio(),
+    link: LINK,
+  });
 
-🔗 Plataforma: ${LINK}
+  if (!validarMensagemSinal(mensagem, LINK)) {
+    console.error("❌ Mensagem de sinal inválida, envio cancelado");
+    return;
+  }
 
-⏰ Entrada: ${horaAleatoria()}
-🎯 Saque: ${saqueAleatorio()}x
+  await bot.telegram.sendMessage(CHANNEL, mensagem, {
+    disable_web_page_preview: true,
+  });
 
-📌 Regra:
-Entrar após 2 voos abaixo de 1.50x
-Valor fixo
-Máx. 2 tentativas`;
-
-  bot.telegram.sendMessage(CHANNEL, mensagem);
   console.log("📢 Sinal enviado");
 }
 
 // loop com intervalo ALEATÓRIO até 10 minutos
 function loopSinais() {
-  enviarSinal();
+  enviarSinal().catch((error) => {
+    console.error("Erro ao enviar sinal:", error);
+  });
 
   // tempo aleatório entre 1 e 10 minutos
   const tempo = (Math.floor(Math.random() * 10) + 1) * 60 * 1000;
@@ -53,23 +75,33 @@ function loopSinais() {
   setTimeout(loopSinais, tempo);
 }
 
-// inicia o bot
-bot.launch();
-console.log("🤖 Bot AVIATOR rodando...");
+function iniciarServidorHttp() {
+  const PORT = process.env.PORT || 3000;
 
-// inicia o loop de sinais
-loopSinais();
+  http
+    .createServer((req, res) => {
+      res.writeHead(200, { "Content-Type": "text/plain" });
+      res.end("OK");
+    })
+    .listen(PORT, () => {
+      console.log("🌐 HTTP server ouvindo na porta", PORT);
+    });
+}
 
-// ===== SERVIDOR HTTP (obrigatório pro EasyPanel) =====
-const PORT = process.env.PORT || 3000;
+function iniciarBot() {
+  bot.launch();
+  console.log("🤖 Bot AVIATOR rodando...");
 
-http.createServer((req, res) => {
-  res.writeHead(200, { "Content-Type": "text/plain" });
-  res.end("OK");
-}).listen(PORT, () => {
-  console.log("🌐 HTTP server ouvindo na porta", PORT);
-});
+  loopSinais();
+  iniciarServidorHttp();
 
-// shutdown limpo
-process.on("SIGTERM", () => process.exit(0));
-process.on("SIGINT", () => process.exit(0));
+  // shutdown limpo
+  process.on("SIGTERM", () => process.exit(0));
+  process.on("SIGINT", () => process.exit(0));
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  iniciarBot();
+}
+
+export { LINK, montarMensagemSinal, validarMensagemSinal };
