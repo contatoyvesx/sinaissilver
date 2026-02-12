@@ -8,6 +8,12 @@ const CHANNEL = "@silvercorp_sinais";
 const LINK = "https://dash.affiliatesbr.com/api/r/73937/cmkrbg0jc000212hh8rno627q";
 // =========================================
 
+const random = {
+  choice(items) {
+    return items[Math.floor(Math.random() * items.length)];
+  },
+};
+
 // gera horário futuro aleatório (1 a 5 minutos à frente)
 function horaAleatoria() {
   const now = new Date();
@@ -23,15 +29,26 @@ function saqueAleatorio() {
   return (Math.random() * (3.0 - 1.5) + 1.5).toFixed(2);
 }
 
-function montarMensagemSinal({ entrada, saque, link }) {
+function build_signal_message(entry_time, cashout, affiliate_link) {
+  const variableLines = [
+    "Disciplina é lucro.",
+    "Sem emocional.",
+    "Gestão ativa.",
+    "Executa e sai.",
+    "Segue o plano.",
+  ];
+
+  const selectedLine = random.choice(variableLines);
+
   return `🚀 AVIATOR — SILVER CORP
 
-🎯 Entrada: ${entrada}
-💸 Saque: ${saque}x
+🎯 Entrada: ${entry_time}
+💸 Saque: ${cashout}x
 📌 Regra: Entrar após 2 voos abaixo de 1.50x | Valor fixo | Máx. 2 tentativas
+🧠 ${selectedLine}
 
 🔥 ENTRE PELO LINK OFICIAL (BÔNUS)
-${link}`;
+${affiliate_link}`;
 }
 
 function validarMensagemSinal(mensagem, link) {
@@ -44,14 +61,19 @@ function validarMensagemSinal(mensagem, link) {
 
 // envia o sinal
 async function enviarSinal() {
-  const mensagem = montarMensagemSinal({
-    entrada: horaAleatoria(),
-    saque: saqueAleatorio(),
-    link: LINK,
-  });
+  const mensagem = build_signal_message(horaAleatoria(), saqueAleatorio(), LINK);
 
   if (!validarMensagemSinal(mensagem, LINK)) {
     console.error("❌ Mensagem de sinal inválida, envio cancelado");
+    return;
+  }
+
+  if (process.env.DRY_RUN === "1") {
+    console.log("🧪 DRY_RUN=1 ativo. Exemplos de mensagem gerada:");
+    console.log("\n--- Exemplo 1 ---\n");
+    console.log(mensagem);
+    console.log("\n--- Exemplo 2 ---\n");
+    console.log(build_signal_message(horaAleatoria(), saqueAleatorio(), LINK));
     return;
   }
 
@@ -89,6 +111,14 @@ function iniciarServidorHttp() {
 }
 
 function iniciarBot() {
+  if (process.env.DRY_RUN === "1") {
+    enviarSinal().catch((error) => {
+      console.error("Erro no DRY_RUN:", error);
+      process.exitCode = 1;
+    });
+    return;
+  }
+
   bot.launch();
   console.log("🤖 Bot AVIATOR rodando...");
 
@@ -104,4 +134,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   iniciarBot();
 }
 
-export { LINK, montarMensagemSinal, validarMensagemSinal };
+export { LINK, build_signal_message, validarMensagemSinal };
