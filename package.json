@@ -3,7 +3,7 @@
   "scripts": {
     "start": "node bot.js",
     "test": "node --test",
-    "dry-run": "node --input-type=module -e \"import { LINK, montarMensagemSinal } from './bot.js'; console.log(montarMensagemSinal({ entrada: '10:01', saque: '1.88', link: LINK })); console.log('\\n---\\n'); console.log(montarMensagemSinal({ entrada: '10:06', saque: '2.34', link: LINK }));\""
+    "dry-run": "DRY_RUN=1 node bot.js"
   },
   "dependencies": {
     "telegraf": "^4.16.3"
