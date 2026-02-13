@@ -1,5 +1,6 @@
 import { Telegraf } from "telegraf";
 import http from "http";
+import { loadVideos, startVideoScheduler } from "./video_scheduler.js";
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -112,10 +113,28 @@ function iniciarServidorHttp() {
 
 function iniciarBot() {
   if (process.env.DRY_RUN === "1") {
+    console.log("🧪 DRY_RUN=1 ativo. Bot em modo simulação.");
+
     enviarSinal().catch((error) => {
-      console.error("Erro no DRY_RUN:", error);
-      process.exitCode = 1;
+      console.error("Erro no DRY_RUN de sinais:", error);
     });
+
+    loadVideos()
+      .then(() =>
+        startVideoScheduler({
+          bot,
+          channel: CHANNEL,
+          affiliateLink: LINK,
+          dryRun: true,
+          sleep: async () => {},
+          maxIterations: 1,
+        })
+      )
+      .catch((error) => {
+        console.error("Erro no DRY_RUN de vídeos:", error);
+        process.exitCode = 1;
+      });
+
     return;
   }
 
@@ -123,6 +142,16 @@ function iniciarBot() {
   console.log("🤖 Bot AVIATOR rodando...");
 
   loopSinais();
+  loadVideos().then(() => {
+    startVideoScheduler({
+      bot,
+      channel: CHANNEL,
+      affiliateLink: LINK,
+      dryRun: process.env.DRY_RUN === "1",
+    }).catch((error) => {
+      console.error("Erro no agendador de vídeos:", error);
+    });
+  });
   iniciarServidorHttp();
 
   // shutdown limpo
